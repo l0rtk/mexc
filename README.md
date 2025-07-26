@@ -28,14 +28,17 @@ Advanced monitoring system for detecting manipulation patterns in MEXC futures m
 
 ## ⚡ Quick Start
 
-### Monitor 100 Pairs (Full Coverage)
+### Monitor Manipulation Targets (Recommended)
 ```bash
-# Automatic top 100 pairs by volume
-./monitor_100_pairs.py
+# Auto-select 50 medium-liquidity pairs perfect for manipulation detection
+./select_manipulation_targets.py
 
-# Or manually with fast mode (recommended for 100 pairs)
+# Then monitor them:
 cd src
-python monitor_optimized.py --mode fast --file ../watchlists/top_100.txt
+python monitor_optimized.py --mode fast --file ../watchlists/manipulation_targets_auto.txt
+
+# Or monitor top 20 high-volatility targets:
+python monitor_optimized.py --mode balanced --file ../watchlists/high_volatility_targets.txt
 ```
 
 ### Monitor 3-10 Pairs (Best Performance)
@@ -54,12 +57,12 @@ python monitor_optimized.py --mode balanced AIXBT_USDT USUAL_USDT XMR_USDT
 
 ### Performance Modes
 
-| Mode | 3 Pairs | 100 Pairs | Features | Best For |
-|------|---------|-----------|----------|----------|
-| **startup** | 2-3s | 20-30s | Basic + Funding | First 24h, testing |
-| **fast** | 1-2s | 20-30s | Minimal | Active trading, 100 pairs |
-| **balanced** | 3-5s | 40-60s | Most features | Daily monitoring |
-| **thorough** | 10-20s | 2-3min | All features | Deep analysis |
+| Mode | 3 Pairs | 20 Pairs | 50 Pairs | Features | Best For |
+|------|---------|----------|----------|----------|----------|
+| **startup** | 2-3s | 10-15s | 20-25s | Basic + Funding | First 24h, testing |
+| **fast** | 1-2s | 8-12s | 20-25s | Minimal | Many pairs, active trading |
+| **balanced** | 3-5s | 15-20s | 30-40s | Most features | 20 pairs, quality signals |
+| **thorough** | 10-20s | 40-60s | 2-3min | All features | Deep analysis |
 
 
 ## 🛠️ Quick Start
@@ -283,8 +286,9 @@ tail -f ../logs/app.log
 
 ## 📝 Notes
 
-- **For 100 pairs**: Use fast mode (20-30s cycles)
-- **For best signals**: Monitor 3-10 volatile pairs
+- **Optimal setup**: 20-50 medium-liquidity pairs
+- **Best targets**: Rank 50-200 by volume (sweet spot)
+- **For quality**: Monitor 20 high-volatility pairs
 - **First 24h**: Use startup mode for sensitive detection
 - **System improves**: Better signals after building history
 - **Alert cooldown**: 2-5 minutes per symbol

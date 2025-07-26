@@ -1,0 +1,55 @@
+# Auto-Selected Manipulation Targets
+# Generated: 2025-07-27 01:43:57 UTC
+# Selection: Medium liquidity + High volatility
+#======================================================================
+
+DIGIGOAL_USDT   # Vol: $   2,112,218, 24h: +48.86%
+PHY_USDT        # Vol: $     958,356, 24h:  +6.93%
+AIMINT_USDT     # Vol: $   1,954,832, 24h:  +4.18%
+ESCG_USDT       # Vol: $   2,793,011, 24h:  -0.83%
+GVA_USDT        # Vol: $   3,326,198, 24h:  -0.74%
+MATEAI_USDT     # Vol: $   1,730,977, 24h:  -0.51%
+MBG_USDT        # Vol: $   1,879,806, 24h:  -0.29%
+NODE_USDT       # Vol: $   1,715,938, 24h:  +0.23%
+ESX_USDT        # Vol: $   1,411,186, 24h:  +0.17%
+USELESS_USDT    # Vol: $   1,586,495, 24h:  +0.13%
+CVX_USDT        # Vol: $   4,802,231, 24h:  +0.13%
+FIS_USDT        # Vol: $   4,475,273, 24h:  +0.13%
+SLP_USDT        # Vol: $   3,040,578, 24h:  +0.12%
+RED_USDT        # Vol: $   9,274,127, 24h:  +0.12%
+WAL_USDT        # Vol: $   4,412,089, 24h:  +0.10%
+PROMPT_USDT     # Vol: $   1,850,845, 24h:  +0.10%
+FLR_USDT        # Vol: $   1,963,592, 24h:  +0.09%
+HUMA_USDT       # Vol: $   6,400,964, 24h:  +0.08%
+CETUS_USDT      # Vol: $   5,789,928, 24h:  +0.08%
+SPX_USDT        # Vol: $   2,062,471, 24h:  +0.07%
+INJ_USDT        # Vol: $   6,984,032, 24h:  +0.07%
+ARPA_USDT       # Vol: $   2,182,914, 24h:  +0.07%
+STO_USDT        # Vol: $   2,421,167, 24h:  +0.07%
+FUN_USDT        # Vol: $   2,001,596, 24h:  +0.07%
+ENS_USDT        # Vol: $  10,271,132, 24h:  +0.07%
+SLF_USDT        # Vol: $   3,062,451, 24h:  -0.06%
+M_USDT          # Vol: $   2,016,697, 24h:  -0.06%
+BEAMX_USDT      # Vol: $   1,925,620, 24h:  +0.06%
+CRO_USDT        # Vol: $   1,940,674, 24h:  +0.06%
+DEEP_USDT       # Vol: $   7,802,075, 24h:  +0.05%
+ULTIMA_USDT     # Vol: $   3,125,628, 24h:  -0.05%
+ETHFI_USDT      # Vol: $  10,250,339, 24h:  +0.05%
+RESOLV_USDT     # Vol: $   8,941,903, 24h:  +0.05%
+EPIC_USDT       # Vol: $   5,696,978, 24h:  +0.05%
+HIFI_USDT       # Vol: $   3,841,388, 24h:  -0.05%
+AITECH_USDT     # Vol: $   2,234,555, 24h:  +0.05%
+ACH_USDT        # Vol: $   1,808,196, 24h:  +0.05%
+TA_USDT         # Vol: $   1,597,260, 24h:  +0.04%
+ZBCN_USDT       # Vol: $   1,440,545, 24h:  +0.04%
+HEI_USDT        # Vol: $   4,361,410, 24h:  +0.04%
+BABY_USDT       # Vol: $   3,995,662, 24h:  +0.04%
+ALGO_USDT       # Vol: $   6,350,277, 24h:  +0.04%
+USUAL_USDT      # Vol: $   4,818,782, 24h:  +0.04%
+ORCA_USDT       # Vol: $   2,772,948, 24h:  +0.04%
+IDOL_USDT       # Vol: $   6,658,012, 24h:  -0.04%
+NIL_USDT        # Vol: $   2,244,395, 24h:  -0.04%
+CTK_USDT        # Vol: $   1,673,657, 24h:  +0.04%
+FLM_USDT        # Vol: $   2,378,112, 24h:  +0.04%
+SEI_USDT        # Vol: $   3,489,147, 24h:  +0.04%
+PARTI_USDT      # Vol: $   2,337,386, 24h:  -0.04%
