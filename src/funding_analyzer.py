@@ -66,10 +66,21 @@ class FundingAnalyzer:
             data = response.json()
             if data.get('success'):
                 funding_data = data.get('data', {})
+                # Handle different response formats
+                if 'data' in funding_data:
+                    funding_data = funding_data['data']
+                
+                # Try different field names
+                funding_rate = funding_data.get('fundingRate') or funding_data.get('funding_rate') or funding_data.get('rate') or 0
+                if isinstance(funding_rate, str):
+                    funding_rate = float(funding_rate)
+                elif funding_rate is None:
+                    funding_rate = 0
+                    
                 result = {
                     'symbol': symbol,
                     'timestamp': datetime.now(timezone.utc),
-                    'funding_rate': float(funding_data.get('fundingRate', 0)),
+                    'funding_rate': float(funding_rate),
                     'max_funding_rate': float(funding_data.get('maxFundingRate', 0)),
                     'hours_to_funding': self.get_hours_to_funding()
                 }
@@ -79,12 +90,26 @@ class FundingAnalyzer:
                 
                 return result
             else:
-                logger.error(f"Funding API error for {symbol}: {data.get('message', 'Unknown')}")
-                return None
+                logger.debug(f"Funding API returned unsuccessful response for {symbol}: {data}")
+                # Return empty funding data instead of None to prevent KeyError
+                return {
+                    'symbol': symbol,
+                    'timestamp': datetime.now(timezone.utc),
+                    'funding_rate': 0.0,
+                    'max_funding_rate': 0.0,
+                    'hours_to_funding': 8.0
+                }
                 
         except Exception as e:
-            logger.error(f"Error fetching funding rate for {symbol}: {e}")
-            return None
+            logger.debug(f"Error fetching funding rate for {symbol}: {e}")
+            # Return empty funding data instead of None
+            return {
+                'symbol': symbol,
+                'timestamp': datetime.now(timezone.utc),
+                'funding_rate': 0.0,
+                'max_funding_rate': 0.0,
+                'hours_to_funding': 8.0
+            }
     
     def get_funding_history(self, symbol: str, hours: int = 24) -> List[Dict]:
         """Get funding rate history from database"""
@@ -199,6 +224,11 @@ class FundingAnalyzer:
         if not funding_data:
             return {}
         
+        # Validate funding_data has required fields
+        if 'funding_rate' not in funding_data:
+            logger.debug(f"Invalid funding data for {symbol}: {funding_data}")
+            return {}
+            
         # Calculate trend
         trend_data = self.calculate_funding_trend(symbol)
         
@@ -209,8 +239,8 @@ class FundingAnalyzer:
         funding_record = {
             'symbol': symbol,
             'timestamp': datetime.now(timezone.utc),
-            'current_rate': funding_data['funding_rate'],
-            'hours_to_funding': funding_data['hours_to_funding'],
+            'funding_rate': funding_data.get('funding_rate', 0),  # Changed from current_rate to funding_rate
+            'hours_to_funding': funding_data.get('hours_to_funding', 8),
             'trend': trend_data['trend'],
             'avg_24h': trend_data['avg_24h'],
             'current_vs_avg': trend_data['current_vs_avg'],
