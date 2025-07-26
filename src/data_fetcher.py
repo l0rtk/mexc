@@ -1,10 +1,17 @@
+import os
 import requests
 import json
+import hmac
+import hashlib
 from datetime import datetime, timedelta
 import time
 from typing import Dict, List, Optional, Tuple
+from urllib.parse import urlencode
 import pandas as pd
 import numpy as np
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class SinglePairDataFetcher:
@@ -16,6 +23,46 @@ class SinglePairDataFetcher:
         self.session = requests.Session()
         self.candles_buffer = []  # Store recent candles for calculations
         self.max_buffer_size = 60  # Keep last 60 candles for 1-hour calculations
+        
+        # Load API credentials for better rate limits
+        self.access_key = os.getenv('MEXC_ACCESS_KEY')
+        self.secret_key = os.getenv('MEXC_SECRET_KEY')
+        self.authenticated = bool(self.access_key and self.secret_key)
+        
+        if self.authenticated:
+            logger.info(f"MEXC API authenticated mode enabled for {symbol}")
+        
+    def _generate_signature(self, params: Dict, timestamp: str) -> str:
+        """Generate HMAC signature for authenticated requests"""
+        sorted_params = sorted(params.items())
+        query_string = urlencode(sorted_params)
+        signature_string = f"{self.access_key}{timestamp}{query_string}"
+        
+        signature = hmac.new(
+            self.secret_key.encode('utf-8'),
+            signature_string.encode('utf-8'),
+            hashlib.sha256
+        ).hexdigest()
+        
+        return signature
+    
+    def _make_request(self, endpoint: str, params: Dict = None) -> Dict:
+        """Make API request with optional authentication"""
+        if params is None:
+            params = {}
+        
+        url = f"{self.base_url}{endpoint}"
+        
+        # Add authentication if available
+        if self.authenticated:
+            timestamp = str(int(time.time() * 1000))
+            params['api_key'] = self.access_key
+            params['req_time'] = timestamp
+            params['sign'] = self._generate_signature(params, timestamp)
+        
+        response = self.session.get(url, params=params)
+        response.raise_for_status()
+        return response.json()
         
     def fetch_candles(self, interval: str = "Min1", limit: int = 60) -> List[Dict]:
         """
@@ -35,10 +82,8 @@ class SinglePairDataFetcher:
         }
         
         try:
-            response = self.session.get(f"{self.base_url}{endpoint}", params=params)
-            response.raise_for_status()
-            
-            data = response.json()
+            logger.debug(f"[{self.symbol}] Fetching {limit} candles, interval={interval}")
+            data = self._make_request(endpoint, params)
             if data.get('success'):
                 candle_data = data.get('data', {})
                 # Convert to more readable format
@@ -71,6 +116,97 @@ class SinglePairDataFetcher:
         except Exception as e:
             print(f"Error fetching candles: {e}")
             return []
+    
+    def fetch_multi_timeframe(self) -> Dict[str, List[Dict]]:
+        """
+        Fetch candles for multiple timeframes
+        
+        Returns:
+            Dictionary with timeframe as key and candles as value
+        """
+        timeframes = {
+            '1m': ('Min1', 60),    # 60 1-minute candles
+            '5m': ('Min5', 60),    # 60 5-minute candles (5 hours)
+            '15m': ('Min15', 40),  # 40 15-minute candles (10 hours)
+        }
+        
+        multi_tf_data = {}
+        
+        for tf_key, (interval, limit) in timeframes.items():
+            try:
+                candles = self.fetch_candles(interval=interval, limit=limit)
+                if candles:
+                    multi_tf_data[tf_key] = candles
+                    logger.debug(f"[{self.symbol}] Fetched {len(candles)} candles for {tf_key}")
+            except Exception as e:
+                logger.error(f"Error fetching {tf_key} candles for {self.symbol}: {e}")
+                multi_tf_data[tf_key] = []
+        
+        return multi_tf_data
+    
+    def detect_timeframe_divergence(self, multi_tf_data: Dict[str, List[Dict]]) -> Dict:
+        """
+        Detect divergences across timeframes
+        
+        Returns:
+            Dictionary with divergence analysis
+        """
+        divergences = {
+            'has_divergence': False,
+            'divergence_type': None,
+            'divergence_strength': 0,
+            'details': {}
+        }
+        
+        # Need all timeframes
+        if not all(tf in multi_tf_data and len(multi_tf_data[tf]) > 0 for tf in ['1m', '5m', '15m']):
+            return divergences
+        
+        try:
+            # Get latest prices and calculate short-term trends
+            trends = {}
+            
+            for tf in ['1m', '5m', '15m']:
+                candles = multi_tf_data[tf]
+                if len(candles) >= 5:
+                    recent_prices = [c['close'] for c in candles[-5:]]
+                    
+                    # Simple trend: compare average of last 2 vs previous 3
+                    recent_avg = np.mean(recent_prices[-2:])
+                    older_avg = np.mean(recent_prices[:3])
+                    
+                    trend_pct = ((recent_avg - older_avg) / older_avg) * 100
+                    trends[tf] = {
+                        'direction': 'up' if trend_pct > 0 else 'down',
+                        'strength': abs(trend_pct)
+                    }
+            
+            # Check for divergences
+            if len(trends) == 3:
+                # Bullish divergence: higher TF down, lower TF up
+                if (trends['15m']['direction'] == 'down' and 
+                    trends['1m']['direction'] == 'up' and 
+                    trends['1m']['strength'] > 1):
+                    
+                    divergences['has_divergence'] = True
+                    divergences['divergence_type'] = 'bullish'
+                    divergences['divergence_strength'] = trends['1m']['strength'] / max(trends['15m']['strength'], 0.1)
+                    
+                # Bearish divergence: higher TF up, lower TF down
+                elif (trends['15m']['direction'] == 'up' and 
+                      trends['1m']['direction'] == 'down' and 
+                      trends['1m']['strength'] > 1):
+                    
+                    divergences['has_divergence'] = True
+                    divergences['divergence_type'] = 'bearish'
+                    divergences['divergence_strength'] = trends['1m']['strength'] / max(trends['15m']['strength'], 0.1)
+                
+                divergences['details'] = trends
+                
+        except Exception as e:
+            logger.error(f"Error detecting timeframe divergence: {e}")
+        
+        return divergences
     
     def calculate_rsi(self, prices: List[float], period: int = 14) -> Optional[float]:
         """Calculate RSI (Relative Strength Index)"""

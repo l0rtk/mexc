@@ -3,7 +3,7 @@ import logging.handlers
 import os
 from datetime import datetime
 
-def setup_logging(name: str, log_level: str = "INFO") -> logging.Logger:
+def setup_logging(name: str, log_level: str = "DEBUG") -> logging.Logger:
     """
     Set up comprehensive logging with file rotation
     
@@ -110,4 +110,4 @@ def setup_logging(name: str, log_level: str = "INFO") -> logging.Logger:
 
 def get_logger(name: str) -> logging.Logger:
     """Get or create a logger with standard configuration"""
-    return setup_logging(name, os.getenv('LOG_LEVEL', 'INFO'))
+    return setup_logging(name, os.getenv('LOG_LEVEL', 'DEBUG'))

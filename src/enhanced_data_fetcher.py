@@ -1,8 +1,12 @@
+import os
 import requests
 import json
+import hmac
+import hashlib
 from datetime import datetime, timezone
 import time
 from typing import Dict, List, Optional, Tuple
+from urllib.parse import urlencode
 import numpy as np
 import logging
 from logging_config import get_logger
@@ -23,6 +27,46 @@ class EnhancedDataFetcher:
         self.recent_trades = []
         self.max_trades = 100
         
+        # Load API credentials for better rate limits
+        self.access_key = os.getenv('MEXC_ACCESS_KEY')
+        self.secret_key = os.getenv('MEXC_SECRET_KEY')
+        self.authenticated = bool(self.access_key and self.secret_key)
+        
+        if self.authenticated:
+            logger.info(f"Enhanced fetcher using authenticated API for {symbol}")
+    
+    def _generate_signature(self, params: Dict, timestamp: str) -> str:
+        """Generate HMAC signature for authenticated requests"""
+        sorted_params = sorted(params.items())
+        query_string = urlencode(sorted_params)
+        signature_string = f"{self.access_key}{timestamp}{query_string}"
+        
+        signature = hmac.new(
+            self.secret_key.encode('utf-8'),
+            signature_string.encode('utf-8'),
+            hashlib.sha256
+        ).hexdigest()
+        
+        return signature
+    
+    def _make_request(self, endpoint: str, params: Dict = None) -> Dict:
+        """Make API request with optional authentication"""
+        if params is None:
+            params = {}
+        
+        url = f"{self.base_url}{endpoint}"
+        
+        # Add authentication if available
+        if self.authenticated:
+            timestamp = str(int(time.time() * 1000))
+            params['api_key'] = self.access_key
+            params['req_time'] = timestamp
+            params['sign'] = self._generate_signature(params, timestamp)
+        
+        response = self.session.get(url, params=params, timeout=5)
+        response.raise_for_status()
+        return response.json()
+        
     def fetch_order_book(self, depth: int = 20) -> Dict:
         """
         Fetch order book depth data
@@ -34,10 +78,7 @@ class EnhancedDataFetcher:
         params = {"limit": depth}
         
         try:
-            response = self.session.get(f"{self.base_url}{endpoint}", params=params, timeout=5)
-            response.raise_for_status()
-            
-            data = response.json()
+            data = self._make_request(endpoint, params)
             if data.get('success'):
                 book_data = data.get('data', {})
                 
