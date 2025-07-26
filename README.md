@@ -9,10 +9,11 @@ Advanced monitoring system for detecting manipulation patterns in MEXC futures m
 ## 🚀 Features
 
 ### Core Features
-- **Optimized Performance**: 2-3 second processing (was 30+ seconds)
-- **Multi-Pair Monitoring**: Track 3-100 futures pairs
+- **Optimized Performance**: 2-3s for 3 pairs, 20-30s for 100 pairs
+- **Multi-Pair Monitoring**: Track 3-100 futures pairs simultaneously
 - **Real-Time Alerts**: Clear, actionable Telegram notifications
 - **MongoDB Storage**: Historical data for pattern analysis
+- **Smart Optimization**: Auto-disables slow features when needed
 
 ### Signal Detection (V2)
 - **Volume Explosion**: Detects >2-5x volume spikes
@@ -25,10 +26,19 @@ Advanced monitoring system for detecting manipulation patterns in MEXC futures m
 - **Hidden Accumulation**: Smart money movement detection
 - **Dynamic Thresholds**: ATR-based adaptive sensitivity
 
-## ⚡ Quick Start (3 Pairs)
+## ⚡ Quick Start
 
-For best performance, monitor 3-10 volatile pairs:
+### Monitor 100 Pairs (Full Coverage)
+```bash
+# Automatic top 100 pairs by volume
+./monitor_100_pairs.py
 
+# Or manually with fast mode (recommended for 100 pairs)
+cd src
+python monitor_optimized.py --mode fast --file ../watchlists/top_100.txt
+```
+
+### Monitor 3-10 Pairs (Best Performance)
 ```bash
 cd src
 
@@ -40,28 +50,17 @@ python monitor_optimized.py --mode fast AIXBT_USDT USUAL_USDT XMR_USDT
 
 # After 24h - use balanced mode (better signals)
 python monitor_optimized.py --mode balanced AIXBT_USDT USUAL_USDT XMR_USDT
-
-# Monitor your watchlist
-python monitor_optimized.py --mode fast --file ../watchlists/favorites.txt
 ```
 
 ### Performance Modes
 
-| Mode | Speed | Features | Best For |
-|------|-------|----------|----------|
-| **startup** | 2-3s | Basic + Funding | First 24h, testing |
-| **fast** | 1-2s | Minimal | Active trading |
-| **balanced** | 3-5s | Most features | Daily monitoring |
-| **thorough** | 10-20s | All features | Deep analysis |
+| Mode | 3 Pairs | 100 Pairs | Features | Best For |
+|------|---------|-----------|----------|----------|
+| **startup** | 2-3s | 20-30s | Basic + Funding | First 24h, testing |
+| **fast** | 1-2s | 20-30s | Minimal | Active trading, 100 pairs |
+| **balanced** | 3-5s | 40-60s | Most features | Daily monitoring |
+| **thorough** | 10-20s | 2-3min | All features | Deep analysis |
 
-### Performance Benchmarks
-
-| Mode | 3 Pairs | 10 Pairs | Features | Best For |
-|------|---------|----------|----------|----------|
-| Startup | 2-3s | 5-8s | Basic + Funding | First run, testing |
-| Fast | 1-2s | 3-5s | Minimal | Active trading |
-| Balanced | 3-5s | 8-12s | Most features | Daily monitoring |
-| Thorough | 10-20s | 30-60s | All features | Deep analysis |
 
 ## 🛠️ Quick Start
 
@@ -284,10 +283,12 @@ tail -f ../logs/app.log
 
 ## 📝 Notes
 
-- **Best performance**: Monitor 3-10 volatile pairs
+- **For 100 pairs**: Use fast mode (20-30s cycles)
+- **For best signals**: Monitor 3-10 volatile pairs
 - **First 24h**: Use startup mode for sensitive detection
 - **System improves**: Better signals after building history
 - **Alert cooldown**: 2-5 minutes per symbol
+- **Auto-optimization**: Disables slow features if needed
 - **All times in UTC**
 
 ## 📚 Technical Overview

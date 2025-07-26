@@ -265,15 +265,26 @@ class OptimizedMonitor:
             elif result:
                 alerts.append(result)
         
-        # Send alerts
-        for alert_data in alerts[:3]:  # Limit alerts per batch
+        # Send alerts (more for 100 pairs)
+        max_alerts = 5 if len(self.symbols) > 50 else 3
+        for alert_data in alerts[:max_alerts]:
             await self.send_alert(alert_data)
         
         elapsed = time.time() - start
         logger.info(f"Batch processed {len(self.symbols)} symbols in {elapsed:.2f}s")
         
-        # Adjust features if too slow
-        if elapsed > 15 and len(self.symbols) <= 5:
+        # Adjust features based on performance and pair count
+        if len(self.symbols) > 50:
+            # For 100 pairs, be more aggressive with optimization
+            if elapsed > 30:
+                logger.warning("Processing too slow for 100 pairs, optimizing...")
+                if self.config.get("enable_multi_timeframe"):
+                    self.config.update({"enable_multi_timeframe": False})
+                    logger.info("Disabled multi-timeframe analysis")
+                if self.config.get("enable_order_book"):
+                    self.config.update({"enable_order_book": False})
+                    logger.info("Disabled order book analysis")
+        elif elapsed > 15 and len(self.symbols) <= 5:
             logger.warning("Processing too slow, disabling some features")
             if self.config.get("enable_multi_timeframe"):
                 self.config.update({"enable_multi_timeframe": False})
