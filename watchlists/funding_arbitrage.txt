@@ -1,0 +1,17 @@
+# Funding Arbitrage Watchlist
+# Pairs that often have extreme funding rates
+
+# High leverage favorites
+DOGE_USDT
+SHIB_USDT
+1000SATS_USDT
+
+# Volatile alts
+SOL_USDT
+AVAX_USDT
+APT_USDT
+
+# Manipulation targets
+BLUR_USDT
+ARB_USDT
+OP_USDT
