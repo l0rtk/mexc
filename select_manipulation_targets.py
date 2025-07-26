@@ -12,33 +12,39 @@ def get_manipulation_targets():
     """Get pairs suitable for manipulation monitoring"""
     try:
         print("Fetching MEXC market data...")
-        url = "https://api.mexc.com/api/v3/ticker/24hr"
+        # Use futures ticker endpoint instead
+        url = "https://contract.mexc.com/api/v1/contract/ticker"
         response = requests.get(url, timeout=10)
         data = response.json()
+        
+        if 'data' in data:
+            data = data['data']  # Extract data array
         
         # Analyze all USDT pairs
         all_pairs = []
         for item in data:
-            if not item['symbol'].endswith('USDT'):
-                continue
-            
             try:
-                # Convert symbol format
-                symbol = item['symbol'][:-4] + '_USDT'  # BTCUSDT -> BTC_USDT
-                volume = float(item['quoteVolume'])
-                price_change = float(item['priceChangePercent'])
+                symbol = item.get('symbol', '')
+                if not symbol.endswith('_USDT'):
+                    continue
+                
+                # Already in correct format for futures
+                volume24 = float(item.get('volume24', 0))
+                price_change = float(item.get('riseFallRate', 0)) * 100  # Convert to percentage
                 
                 # Skip stablecoins
                 if any(stable in symbol for stable in ['USDC_', 'USDT_', 'BUSD_', 'DAI_', 'TUSD_', 'FDUSD_']):
                     continue
-                    
-                all_pairs.append({
-                    'symbol': symbol,
-                    'volume': volume,
-                    'change': price_change,
-                    'volatility': abs(price_change)
-                })
-            except:
+                
+                # Only include if has decent volume (futures volume in contracts)
+                if volume24 > 100000:  # Min 100k contracts volume
+                    all_pairs.append({
+                        'symbol': symbol,
+                        'volume': volume24,
+                        'change': price_change,
+                        'volatility': abs(price_change)
+                    })
+            except Exception as e:
                 continue
         
         # Sort by volume to find the sweet spot
