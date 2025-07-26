@@ -6,14 +6,18 @@ from typing import Dict, List, Optional, Tuple
 from datetime import datetime, timezone
 import numpy as np
 
-from advanced_signals import AdvancedSignalDetector
 
-
-class AdvancedSignalDetectorV2(AdvancedSignalDetector):
+class AdvancedSignalDetectorV2:
     """Enhanced signal detection with new data sources"""
     
     def __init__(self):
-        super().__init__()
+        # Risk level thresholds
+        self.thresholds = {
+            'LOW': 0.3,
+            'MEDIUM': 0.5,
+            'HIGH': 0.7,
+            'EXTREME': 0.85
+        }
         
         # Updated weights for more signals
         self.signal_weights = {
@@ -26,6 +30,84 @@ class AdvancedSignalDetectorV2(AdvancedSignalDetector):
             'funding_arbitrage': 0.1,
             'hidden_accumulation': 0.05
         }
+    
+    def detect_volume_explosion(self, data: Dict) -> Tuple[bool, float, str]:
+        """Detect explosive volume increases"""
+        vol_ratio = data.get('volume_analysis', {}).get('spike_magnitude', 0)
+        rsi = data.get('indicators', {}).get('rsi_14', 50)
+        
+        if vol_ratio > 5:
+            confidence = min(0.9, vol_ratio / 10)
+            return True, confidence, f"Volume {vol_ratio:.1f}x average"
+        elif vol_ratio > 3 and (rsi < 30 or rsi > 70):
+            confidence = min(0.7, vol_ratio / 6)
+            return True, confidence, f"Volume {vol_ratio:.1f}x with RSI extreme"
+        return False, 0, ""
+    
+    def detect_rsi_divergence(self, data: Dict) -> Tuple[bool, float, str]:
+        """Detect price/RSI divergences"""
+        rsi = data.get('indicators', {}).get('rsi_14', 50)
+        price_change = data.get('price_movement', {}).get('change_5m', 0)
+        
+        # Bullish divergence
+        if rsi < 30 and price_change < -1:
+            return True, 0.7, "Bullish divergence (oversold)"
+        # Bearish divergence  
+        elif rsi > 70 and price_change > 1:
+            return True, 0.7, "Bearish divergence (overbought)"
+        return False, 0, ""
+    
+    def detect_momentum_shift(self, data: Dict) -> Tuple[bool, float, str]:
+        """Detect rapid momentum changes"""
+        momentum = data.get('indicators', {}).get('momentum', 0)
+        price_change = data.get('price_movement', {}).get('change_5m', 0)
+        
+        if abs(momentum) > 0.5 and abs(price_change) > 2:
+            confidence = min(0.8, abs(momentum))
+            direction = "bullish" if momentum > 0 else "bearish"
+            return True, confidence, f"Strong {direction} momentum"
+        return False, 0, ""
+    
+    def detect_liquidity_trap(self, data: Dict, order_book: Dict = None) -> Tuple[bool, float, str]:
+        """Detect liquidity trap patterns in order book"""
+        if not order_book:
+            return False, 0, ""
+            
+        bids = order_book.get('bids', [])
+        asks = order_book.get('asks', [])
+        
+        if not bids or not asks:
+            return False, 0, ""
+            
+        # Calculate imbalances
+        bid_volume = sum(float(bid[1]) for bid in bids[:5])
+        ask_volume = sum(float(ask[1]) for ask in asks[:5])
+        
+        if bid_volume > 0 and ask_volume > 0:
+            imbalance = (bid_volume - ask_volume) / (bid_volume + ask_volume)
+            
+            if abs(imbalance) > 0.3:
+                confidence = min(0.7, abs(imbalance) * 1.5)
+                direction = "bid" if imbalance > 0 else "ask"
+                return True, confidence, f"Liquidity trap on {direction} side"
+        
+        return False, 0, ""
+    
+    def detect_accumulation_distribution(self, data: Dict, order_book: Dict = None) -> Tuple[bool, float, str]:
+        """Detect accumulation/distribution patterns"""
+        price_change = data.get('price_movement', {}).get('change_60m', 0)
+        volume_ratio = data.get('volume_analysis', {}).get('volume_ratio_60m', 1)
+        rsi = data.get('indicators', {}).get('rsi_14', 50)
+        
+        # Accumulation: Price stable/down but volume increasing
+        if -2 < price_change < 0.5 and volume_ratio > 1.5 and rsi < 45:
+            return True, 0.6, "Accumulation phase detected"
+        
+        # Distribution: Price up but volume decreasing  
+        elif price_change > 2 and volume_ratio < 0.8 and rsi > 65:
+            return True, 0.6, "Distribution phase detected"
+            
+        return False, 0, ""
     
     def detect_liquidation_squeeze(self, data: Dict, liquidation_data: Dict, 
                                   funding_data: Dict) -> Tuple[bool, float, str]:

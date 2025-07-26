@@ -27,7 +27,7 @@ from dotenv import load_dotenv
 from funding_analyzer import FundingAnalyzer
 from statistical_analyzer import StatisticalAnalyzer
 from advanced_signals_v2 import enhance_alert_detection_v2
-from advanced_signals import enhance_alert_detection
+# from advanced_signals import enhance_alert_detection  # Removed, using V2
 from monitor_config import get_config, set_config_mode
 
 # Load environment
@@ -186,8 +186,8 @@ class OptimizedMonitor:
                     tf_divergence=tf_divergence
                 )
             else:
-                # Use V1 (simpler, faster)
-                signal = enhance_alert_detection(analysis, order_book)
+                # Use V2 with minimal data (simpler, faster)
+                signal = enhance_alert_detection_v2(analysis, order_book)
             timings['signal'] = time.time() - t0
             
             # Update market conditions
@@ -431,9 +431,12 @@ Examples:
         try:
             with open(args.file, 'r') as f:
                 for line in f:
-                    symbol = line.strip()
-                    if symbol and not symbol.startswith('#'):
-                        symbols.append(symbol)
+                    line = line.strip()
+                    if line and not line.startswith('#'):
+                        # Remove any comments after the symbol
+                        symbol = line.split('#')[0].strip()
+                        if symbol:
+                            symbols.append(symbol)
         except Exception as e:
             print(f"Error loading file: {e}")
             return
