@@ -86,6 +86,12 @@ class OptimizedMonitor:
         # Performance tracking
         self.slow_operations = set()  # Track operations that are too slow
         
+        # Rate limiting for order book
+        self.order_book_last_fetch = {}
+        self.order_book_min_interval = 2.0  # Minimum seconds between order book requests per symbol
+        self.order_book_batch_limit = 5  # Max order book requests per batch
+        self.order_book_request_count = 0  # Track requests in current batch
+        
     async def process_symbol(self, symbol: str) -> Optional[Dict]:
         """Optimized symbol processing"""
         try:
@@ -114,24 +120,32 @@ class OptimizedMonitor:
                  analysis['indicators'].get('rsi_14', 50) > 65)
             )
             
-            # 3. Order book (CONDITIONAL)
+            # 3. Order book (CONDITIONAL with rate limiting)
             order_book = {}
             if self.config.get("enable_order_book") and is_active:
-                if 'order_book' not in self.slow_operations:
-                    try:
-                        t0 = time.time()
-                        order_book = self.enhanced_fetchers[symbol].fetch_order_book(
-                            depth=self.config.get("order_book_depth", 10)
-                        )
-                        ob_time = time.time() - t0
-                        timings['order_book'] = ob_time
-                        
-                        # Mark as slow if taking too long
-                        if ob_time > 2:
-                            logger.warning(f"Order book slow for {symbol}: {ob_time:.2f}s")
-                            self.slow_operations.add('order_book')
-                    except Exception as e:
-                        logger.debug(f"Order book failed for {symbol}: {str(e)[:50]}")
+                # Check both per-symbol rate limit and batch limit
+                last_fetch = self.order_book_last_fetch.get(symbol, 0)
+                if (time.time() - last_fetch >= self.order_book_min_interval and 
+                    self.order_book_request_count < self.order_book_batch_limit):
+                    if 'order_book' not in self.slow_operations:
+                        try:
+                            t0 = time.time()
+                            order_book = self.enhanced_fetchers[symbol].fetch_order_book(
+                                depth=self.config.get("order_book_depth", 10)
+                            )
+                            ob_time = time.time() - t0
+                            timings['order_book'] = ob_time
+                            
+                            # Update last fetch time and count
+                            self.order_book_last_fetch[symbol] = time.time()
+                            self.order_book_request_count += 1
+                            
+                            # Mark as slow if taking too long
+                            if ob_time > 2:
+                                logger.warning(f"Order book slow for {symbol}: {ob_time:.2f}s")
+                                self.slow_operations.add('order_book')
+                        except Exception as e:
+                            logger.debug(f"Order book failed for {symbol}: {str(e)[:50]}")
             
             # 4. Multi-timeframe (CONDITIONAL)
             tf_divergence = {}
@@ -247,6 +261,9 @@ class OptimizedMonitor:
     async def process_batch(self):
         """Process all symbols in parallel"""
         start = time.time()
+        
+        # Reset order book request count for this batch
+        self.order_book_request_count = 0
         
         # Create tasks for all symbols
         tasks = []
