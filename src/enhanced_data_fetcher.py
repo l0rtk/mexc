@@ -149,13 +149,15 @@ class EnhancedDataFetcher:
                 # Process trades (deals format)
                 processed_trades = []
                 for i, trade in enumerate(trades):
-                    # Deals format: [timestamp, price, volume, side, id]
+                    # Dict format: p=price, v=volume, T=type, M=side (1=buy, 2=sell), t=timestamp
                     processed_trades.append({
-                        'timestamp': datetime.fromtimestamp(trade[0] / 1000, tz=timezone.utc),
-                        'price': float(trade[1]),
-                        'volume': float(trade[2]),
-                        'side': 'buy' if trade[3] == 1 else 'sell',
-                        'trade_id': str(trade[4]) if len(trade) > 4 else str(i)
+                        'timestamp': datetime.fromtimestamp(trade['t'] / 1000, tz=timezone.utc),
+                        'price': float(trade['p']),
+                        'qty': float(trade['v']),  # Changed from 'volume' to 'qty' to match expected format
+                        'isBuyerMaker': trade['M'] == 2,  # M=1 is buy (taker), M=2 is sell (maker)
+                        'side': 'buy' if trade['M'] == 1 else 'sell',
+                        'time': trade['t'],
+                        'trade_id': str(i)
                     })
                 
                 # Update cache
