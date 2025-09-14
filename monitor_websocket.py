@@ -24,12 +24,14 @@ load_dotenv()
 
 
 # Priority pairs for WebSocket monitoring
+# huge: threshold for CSV logging (moderate size orders)
+# mega: threshold for Telegram alerts (EXTREMELY LARGE orders only)
 PRIORITY_TARGETS = {
-    'HIFI_USDT': {'huge': 15000, 'mega': 40000},
-    'PUMPFUN_USDT': {'huge': 8000, 'mega': 20000},
-    'SUI_USDT': {'huge': 150000, 'mega': 400000},
-    'WIF_USDT': {'huge': 25000, 'mega': 60000},
-    'TRB_USDT': {'huge': 40000, 'mega': 100000},
+    'HIFI_USDT': {'huge': 15000, 'mega': 150000},      # 10x increase
+    'PUMPFUN_USDT': {'huge': 8000, 'mega': 100000},    # 12.5x increase
+    'SUI_USDT': {'huge': 150000, 'mega': 2000000},     # 5x increase (already liquid)
+    'WIF_USDT': {'huge': 25000, 'mega': 300000},       # 5x increase
+    'TRB_USDT': {'huge': 40000, 'mega': 500000},       # 5x increase
 }
 
 
@@ -48,21 +50,30 @@ class MEXCWebSocketMonitor:
         self.stats = {symbol: {'huge': 0, 'mega': 0, 'updates': 0}
                      for symbol in PRIORITY_TARGETS}
 
-        # CSV setup
+        # CSV setup - one file per symbol
         os.makedirs("data", exist_ok=True)
-        self.csv_file = f"data/websocket_orders_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-        self._init_csv()
+        self.csv_files = {}
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+
+        for symbol in PRIORITY_TARGETS:
+            # Create subdirectory for each symbol
+            symbol_dir = f"data/{symbol}"
+            os.makedirs(symbol_dir, exist_ok=True)
+
+            # Create CSV file for this symbol
+            self.csv_files[symbol] = f"{symbol_dir}/websocket_{timestamp}.csv"
+            self._init_csv(self.csv_files[symbol])
 
         # Ping thread
         self.ping_thread = None
         self.running = True
 
-    def _init_csv(self):
+    def _init_csv(self, csv_file):
         """Initialize CSV file"""
-        with open(self.csv_file, 'w', newline='') as f:
+        with open(csv_file, 'w', newline='') as f:
             writer = csv.writer(f)
             writer.writerow([
-                'timestamp', 'symbol', 'side', 'price',
+                'timestamp', 'side', 'price',
                 'volume', 'volume_usdt', 'alert_type'
             ])
 
@@ -220,12 +231,17 @@ class MEXCWebSocketMonitor:
             # MEGA order - send Telegram
             logger.info(f"💥 MEGA {emoji} {symbol}: ${volume_usdt:,.0f} @ ${price:.4f}")
 
-            message = f"💥💥💥 <b>MEGA ORDER (WebSocket)</b> 💥💥💥\n\n"
+            # Calculate how many times larger than the mega threshold
+            multiplier = volume_usdt / mega_threshold
+
+            message = f"🚨🚨🚨 <b>MASSIVE ORDER DETECTED</b> 🚨🚨🚨\n\n"
+            message += f"💥💥💥 <b>EXTREMELY LARGE</b> 💥💥💥\n\n"
             message += f"{emoji} <b>{symbol}</b>\n"
             message += f"Side: <b>{side}</b>\n"
             message += f"Size: <b>${volume_usdt:,.0f}</b>\n"
             message += f"Price: ${price:.4f}\n"
             message += f"Volume: {volume:,.2f}\n"
+            message += f"Magnitude: {multiplier:.1f}x mega threshold\n"
             message += f"Time: {timestamp.strftime('%H:%M:%S.%f')[:-3]}"
 
             self.telegram.send_message(message)
@@ -240,11 +256,12 @@ class MEXCWebSocketMonitor:
 
     def save_to_csv(self, timestamp, symbol, side, price, volume, volume_usdt, alert_type):
         """Save order to CSV"""
-        with open(self.csv_file, 'a', newline='') as f:
+        csv_file = self.csv_files[symbol]
+        with open(csv_file, 'a', newline='') as f:
             writer = csv.writer(f)
             writer.writerow([
                 timestamp.isoformat(),
-                symbol, side, price, volume,
+                side, price, volume,
                 volume_usdt, alert_type
             ])
 
@@ -344,7 +361,7 @@ class MEXCWebSocketMonitor:
 
         print("="*60)
         print("⚡ REAL-TIME MODE - Zero latency WebSocket streaming")
-        print(f"CSV: {self.csv_file}")
+        print("CSV files in: data/{SYMBOL}/websocket_*.csv")
         print("\nConnecting to WebSocket... (Ctrl+C to stop)\n")
 
         # Connect to WebSocket
