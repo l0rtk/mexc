@@ -10,7 +10,7 @@ Real-time monitoring system for detecting large orders and unusual trading activ
 - **Volume Surge Detection**: Alerts on sudden volume increases
 - **Coordinated Trading Detection**: Identifies potential coordinated trades
 - **Spoofing Detection**: Monitors for potential order book manipulation
-- **Real-time Alerts**: Console-based alert system with priority levels
+- **Real-time Alerts**: Console and Telegram notifications with priority levels
 
 ## Installation
 
@@ -27,7 +27,9 @@ pip install -r requirements.txt
 
 # Configure environment
 cp .env.example .env
-# Edit .env with your MEXC API credentials (optional but recommended)
+# Edit .env with your credentials:
+# - MEXC API keys (optional but recommended for better rate limits)
+# - Telegram bot token and channel ID (for alerts)
 ```
 
 ## Usage
@@ -59,6 +61,8 @@ python monitor.py BTC_USDT ETH_USDT SOL_USDT \
 - `--whale-threshold`: Threshold for whale alerts in USDT (default: 100000)
 - `--interval`: Update interval in seconds (default: 5)
 - `--log-alerts`: Save alerts to file (alerts.log)
+- `--no-telegram`: Disable Telegram notifications
+- `--test-telegram`: Test Telegram connection and exit
 
 ## Alert Types
 
@@ -78,7 +82,29 @@ python monitor.py BTC_USDT ETH_USDT SOL_USDT \
 # Optional MEXC API credentials for better rate limits
 MEXC_ACCESS_KEY=your_access_key
 MEXC_SECRET_KEY=your_secret_key
+
+# Telegram Bot Configuration (required for Telegram alerts)
+TELEGRAM_BOT_TOKEN=your_bot_token_here
+TELEGRAM_CHANNEL_ID=@your_channel_or_chat_id
 ```
+
+### Setting up Telegram Alerts
+
+1. **Create a Telegram Bot**:
+   - Message @BotFather on Telegram
+   - Send `/newbot` and follow instructions
+   - Copy the bot token
+
+2. **Get Channel/Chat ID**:
+   - Create a channel or group
+   - Add your bot as admin
+   - For channels: use @channelname
+   - For groups: use the group ID (starts with -100)
+
+3. **Test Connection**:
+   ```bash
+   python monitor.py --test-telegram
+   ```
 
 ## Project Structure
 

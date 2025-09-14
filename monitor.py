@@ -45,7 +45,8 @@ class MEXCFuturesMonitor:
 
         self.alert_system = AlertSystem(
             enable_console=True,
-            enable_file=self.config.get('log_alerts', False)
+            enable_file=self.config.get('log_alerts', False),
+            enable_telegram=self.config.get('telegram', True)
         )
 
         self.update_interval = self.config.get('update_interval', 5)
@@ -137,7 +138,7 @@ def validate_symbol(symbol: str) -> str:
 
 def main():
     parser = argparse.ArgumentParser(description='MEXC Futures Order Monitor')
-    parser.add_argument('symbols', nargs='+', help='Symbols to monitor (e.g., BTC_USDT ETH_USDT)')
+    parser.add_argument('symbols', nargs='*', help='Symbols to monitor (e.g., BTC_USDT ETH_USDT)')
     parser.add_argument('--min-order', type=float, default=50000,
                        help='Minimum order size in USDT (default: 50000)')
     parser.add_argument('--min-trade', type=float, default=25000,
@@ -148,8 +149,23 @@ def main():
                        help='Update interval in seconds (default: 5)')
     parser.add_argument('--log-alerts', action='store_true',
                        help='Log alerts to file')
+    parser.add_argument('--no-telegram', action='store_true',
+                       help='Disable Telegram notifications')
+    parser.add_argument('--test-telegram', action='store_true',
+                       help='Test Telegram connection and exit')
 
     args = parser.parse_args()
+
+    # Test Telegram connection if requested
+    if args.test_telegram:
+        from src.telegram_notifier import TelegramNotifier
+        notifier = TelegramNotifier()
+        notifier.test_connection()
+        return
+
+    # Check if symbols provided when not testing
+    if not args.symbols:
+        parser.error("symbols are required unless using --test-telegram")
 
     symbols = [validate_symbol(s) for s in args.symbols]
 
@@ -158,7 +174,8 @@ def main():
         'min_trade_usdt': args.min_trade,
         'whale_threshold_usdt': args.whale_threshold,
         'update_interval': args.interval,
-        'log_alerts': args.log_alerts
+        'log_alerts': args.log_alerts,
+        'telegram': not args.no_telegram
     }
 
     monitor = MEXCFuturesMonitor(symbols, config)

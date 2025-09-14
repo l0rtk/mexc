@@ -3,6 +3,7 @@ from typing import Dict, List, Optional
 from datetime import datetime
 from colorama import init, Fore, Style
 import json
+from .telegram_notifier import TelegramNotifier
 
 init(autoreset=True)
 logger = logging.getLogger(__name__)
@@ -10,12 +11,19 @@ logger = logging.getLogger(__name__)
 
 class AlertSystem:
     def __init__(self, enable_console: bool = True, enable_file: bool = False,
-                 alert_file: str = "alerts.log"):
+                 alert_file: str = "alerts.log", enable_telegram: bool = True):
         self.enable_console = enable_console
         self.enable_file = enable_file
+        self.enable_telegram = enable_telegram
         self.alert_file = alert_file
         self.alert_counts = {}
         self.last_alerts = {}
+
+        # Initialize Telegram notifier
+        if self.enable_telegram:
+            self.telegram = TelegramNotifier()
+        else:
+            self.telegram = None
 
     def format_large_order_alert(self, order) -> str:
         emoji = "🐋" if order.is_whale else "📊"
@@ -118,6 +126,10 @@ class AlertSystem:
 
             if self.enable_file:
                 self._write_to_file(alert_type, data, priority)
+
+            # Send to Telegram if enabled
+            if self.enable_telegram and self.telegram:
+                self.telegram.send_alert(alert_type, data, priority)
 
             self._update_alert_stats(alert_type)
 
