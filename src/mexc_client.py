@@ -40,13 +40,24 @@ class MEXCFuturesClient:
 
     def get_active_contracts(self) -> List[Dict]:
         try:
-            response = self.session.get(f"{self.BASE_URL}/api/v1/contract/detail")
+            # Get all tickers instead of contract details
+            response = self.session.get(f"{self.BASE_URL}/api/v1/contract/ticker")
             response.raise_for_status()
             data = response.json()
 
             if data.get('success'):
-                contracts = data.get('data', [])
-                return [c for c in contracts if c.get('state') == 1]
+                tickers = data.get('data', [])
+                # Convert ticker data to contract format
+                contracts = []
+                for ticker in tickers:
+                    if ticker.get('symbol') and float(ticker.get('volume24', 0)) > 0:
+                        contracts.append({
+                            'symbol': ticker.get('symbol'),
+                            'displayName': ticker.get('symbol'),
+                            'state': 1,  # Active
+                            **ticker  # Include all ticker data
+                        })
+                return contracts
             return []
         except Exception as e:
             logger.error(f"Error fetching contracts: {e}")
